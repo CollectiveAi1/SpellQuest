@@ -1,0 +1,255 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/spelling_enhancement_app/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  name              String?
+  role              UserRole @default(STUDENT)
+  avatarId          String   @default("avatar_wizard")
+  themeColor        String   @default("purple")
+  title             String   @default("Spelling Apprentice")
+  bio               String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  progress          UserProgress?
+  diagnosticResults DiagnosticResult[]
+  phaseProgress     PhaseProgress[]
+  dailyActivities   DailyActivity[]
+  writingProjects   WritingProject[]
+  exerciseResults   ExerciseResult[]
+  achievements      UserAchievement[]
+  bookmarks         ResourceBookmark[]
+  checkpointResults CheckpointResult[]
+  studySessions     StudySession[]
+}
+
+enum UserRole {
+  STUDENT
+  PARENT
+  TEACHER
+  ADMIN
+}
+
+model UserProgress {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentPhase        Int      @default(1)
+  phaseCompletion     Float    @default(0)
+  wordsMastered       Int      @default(0)
+  spellingAccuracy    Float    @default(0)
+  currentStreak       Int      @default(0)
+  longestStreak       Int      @default(0)
+  lastActivityDate    DateTime?
+  totalStudyMinutes   Int      @default(0)
+  creativeWordCount   Int      @default(0)
+  diagnosticCompleted Boolean  @default(false)
+  diagnosticScore     Int?
+  recommendedPhase    Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model DiagnosticResult {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalScore        Int
+  partAScore        Int      @default(0)
+  partBScore        Int      @default(0)
+  partCScore        Int      @default(0)
+  partDScore        Int      @default(0)
+  recommendedPhase  Int
+  errorPatterns     Json
+  answers           Json
+  completedAt       DateTime @default(now())
+  
+  @@index([userId])
+}
+
+model PhaseProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseNumber     Int
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  completionPct   Float    @default(0)
+  wordsMastered   Int      @default(0)
+  accuracy        Float    @default(0)
+  sessionsCompleted Int    @default(0)
+  totalSessions   Int      @default(20)
+  
+  @@unique([userId, phaseNumber])
+  @@index([userId])
+}
+
+model DailyActivity {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime @default(now())
+  phaseNumber     Int
+  dayOfWeek       String
+  visualCompleted Boolean  @default(false)
+  auditoryCompleted Boolean @default(false)
+  kinestheticCompleted Boolean @default(false)
+  totalMinutes    Int      @default(0)
+  wordsAttempted  Int      @default(0)
+  wordsCorrect    Int      @default(0)
+  notes           String?
+  
+  @@index([userId, date])
+}
+
+model WritingProject {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectNumber   Int
+  title           String
+  content         String   @default("")
+  wordCount       Int      @default(0)
+  spellingErrors  Int      @default(0)
+  spellingAccuracy Float   @default(0)
+  status          ProjectStatus @default(DRAFT)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+  
+  @@unique([userId, projectNumber])
+  @@index([userId])
+}
+
+enum ProjectStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+}
+
+model ExerciseResult {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exerciseType    String
+  phaseNumber     Int
+  score           Int
+  totalQuestions  Int
+  accuracy        Float
+  timeSpent       Int
+  wordsAttempted  Json
+  incorrectWords  Json
+  completedAt     DateTime @default(now())
+  
+  @@index([userId, exerciseType])
+}
+
+model UserAchievement {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId   String
+  earnedAt        DateTime @default(now())
+  
+  @@unique([userId, achievementId])
+  @@index([userId])
+}
+
+model ResourceBookmark {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceTitle   String
+  resourceCategory String
+  createdAt       DateTime @default(now())
+  
+  @@unique([userId, resourceTitle])
+  @@index([userId])
+}
+
+model CheckpointResult {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phaseNumber     Int
+  score           Int
+  totalPoints     Int      @default(100)
+  passed          Boolean
+  answers         Json
+  errorAnalysis   Json?
+  attemptNumber   Int      @default(1)
+  completedAt     DateTime @default(now())
+  
+  @@index([userId, phaseNumber])
+}
+
+model StudySession {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date            DateTime @default(now())
+  duration        Int
+  activitiesCompleted Json
+  
+  @@index([userId, date])
+}
+
+model Achievement {
+  id              String   @id @default(cuid())
+  achievementId   String   @unique
+  title           String
+  description     String
+  iconName        String
+  category        String
+  requirement     String
+  threshold       Int      @default(1)
+}
+
+model Phase {
+  id              String   @id @default(cuid())
+  phaseNumber     Int      @unique
+  title           String
+  description     String
+  objectives      Json
+  keyConcepts     Json
+  milestones      Json
+  totalSessions   Int      @default(20)
+  weeks           String
+}
+
+model Resource {
+  id              String   @id @default(cuid())
+  title           String   @unique
+  description     String
+  qualityRating   Int
+  difficultyLevel String
+  timeCommitment  String
+  cost            String
+  url             String
+  category        String
+  bestForPhase    String
+}
+
+model Project {
+  id              String   @id @default(cuid())
+  projectNumber   Int      @unique
+  title           String
+  objective       String
+  materials       String
+  instructions    Json
+  spellingFocus   String
+  time            String
+  phase           String
+  level           String
+}
