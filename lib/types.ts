@@ -1,3 +1,7 @@
+/**
+ * Shared type definitions for the SpellQuest application.
+ */
+
 export interface User {
   id: string;
   email: string;

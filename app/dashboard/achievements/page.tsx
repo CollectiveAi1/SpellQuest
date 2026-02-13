@@ -13,7 +13,7 @@ export default async function AchievementsPage() {
     redirect("/login");
   }
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
 
   const userAchievements = await prisma.userAchievement.findMany({
     where: { userId },

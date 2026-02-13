@@ -139,10 +139,32 @@ const commonMisspellings: Record<string, string> = {
   "thier": "their", "togeather": "together", "tommorrow": "tomorrow",
 };
 
+interface UserWritingProject {
+  id: string;
+  projectNumber: number;
+  title: string;
+  content: string;
+  wordCount: number;
+  status: "DRAFT" | "IN_PROGRESS" | "COMPLETED";
+}
+
+interface WritingProjectData {
+  id: string;
+  projectNumber: number;
+  title: string;
+  objective: string;
+  materials: string;
+  instructions: string[];
+  spellingFocus: string;
+  time: string;
+  phase: string;
+  level: string;
+}
+
 interface WritingClientProps {
   userId: string;
   currentPhase: number;
-  userProjects: any[];
+  userProjects: UserWritingProject[];
 }
 
 export default function WritingClient({
@@ -150,7 +172,7 @@ export default function WritingClient({
   currentPhase,
   userProjects,
 }: WritingClientProps) {
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<WritingProjectData | null>(null);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "editor">("list");

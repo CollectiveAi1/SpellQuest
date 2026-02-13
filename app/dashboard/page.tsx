@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import DashboardClient from "./_components/dashboard-client";
+import { User, UserProgress } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +14,13 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const userId = (session.user as any).id;
+  const user = session.user as User;
+  const userId = user.id;
 
   // Fetch user progress
-  const userProgress = await prisma.userProgress.findUnique({
+  const userProgress = (await prisma.userProgress.findUnique({
     where: { userId },
-  });
+  })) as UserProgress | null;
 
   // Fetch recent activities
   const recentActivities = await prisma.dailyActivity.findMany({
@@ -52,7 +54,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      user={session.user}
+      user={user}
       progress={userProgress}
       recentActivities={recentActivities}
       achievements={userAchievements}

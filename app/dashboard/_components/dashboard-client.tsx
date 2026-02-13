@@ -21,10 +21,11 @@ import {
 } from "lucide-react";
 import { phases, achievements } from "@/lib/curriculum-data";
 import ProgressChart from "./progress-chart";
+import { User, UserProgress } from "@/lib/types";
 
 interface DashboardClientProps {
-  user: any;
-  progress: any;
+  user: User;
+  progress: UserProgress | null;
   recentActivities: any[];
   achievements: any[];
   phaseProgress: any[];
