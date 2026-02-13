@@ -20,10 +20,21 @@ import { useRouter } from "next/navigation";
 import { diagnosticQuestions, phases } from "@/lib/curriculum-data";
 import Image from "next/image";
 
+interface DiagnosticResult {
+  totalScore: number;
+  partAScore: number;
+  partBScore: number;
+  partCScore: number;
+  partDScore: number;
+  recommendedPhase: number;
+  errorPatterns: Record<string, number>;
+  completedAt?: string | Date;
+}
+
 interface DiagnosticClientProps {
   userId: string;
   diagnosticCompleted: boolean;
-  previousResult: any;
+  previousResult: DiagnosticResult | null;
 }
 
 export default function DiagnosticClient({
@@ -36,7 +47,7 @@ export default function DiagnosticClient({
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [showResults, setShowResults] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<DiagnosticResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const question = diagnosticQuestions?.[currentQuestion];
@@ -159,7 +170,7 @@ export default function DiagnosticClient({
             </div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Assessment Complete!</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
-              Completed on {new Date(previousResult?.completedAt)?.toLocaleDateString()}
+              Completed on {previousResult?.completedAt ? new Date(previousResult.completedAt).toLocaleDateString() : "Unknown date"}
             </p>
           </div>
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import ExercisesClient from "./_components/exercises-client";
+import { User } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function ExercisesPage() {
     redirect("/login");
   }
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
 
   const userProgress = await prisma.userProgress.findUnique({
     where: { userId },

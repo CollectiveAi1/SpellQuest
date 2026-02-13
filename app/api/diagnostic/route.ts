@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
+import { diagnosticSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
+    const result = diagnosticSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json({ error: "Invalid input", details: result.error.format() }, { status: 400 });
+    }
+
     const {
-      userId,
       totalScore,
       partAScore,
       partBScore,
@@ -16,7 +29,17 @@ export async function POST(req: NextRequest) {
       recommendedPhase,
       errorPatterns,
       answers,
-    } = body;
+    } = result.data;
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userId = user.id;
 
     // Create diagnostic result
     await prisma.diagnosticResult.create({
@@ -28,15 +51,22 @@ export async function POST(req: NextRequest) {
         partCScore,
         partDScore,
         recommendedPhase,
-        errorPatterns,
+        errorPatterns: errorPatterns || [],
         answers,
       },
     });
 
     // Update user progress
-    await prisma.userProgress.update({
+    await prisma.userProgress.upsert({
       where: { userId },
-      data: {
+      update: {
+        diagnosticCompleted: true,
+        diagnosticScore: totalScore,
+        recommendedPhase,
+        currentPhase: recommendedPhase,
+      },
+      create: {
+        userId,
         diagnosticCompleted: true,
         diagnosticScore: totalScore,
         recommendedPhase,

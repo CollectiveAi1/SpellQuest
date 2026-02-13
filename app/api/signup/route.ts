@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { signupSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, name, role } = body;
+    const result = signupSchema.safeParse(body);
 
-    if (!email || !password) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Invalid input", details: result.error.format() },
         { status: 400 }
       );
     }
+
+    const { email, password, name, role } = result.data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -29,16 +32,12 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Validate role - only allow valid enum values
-    const validRoles = ["STUDENT", "PARENT", "TEACHER", "ADMIN"];
-    const userRole = validRoles.includes(role) ? role : "STUDENT";
-
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name: name || email.split("@")[0],
-        role: userRole,
+        role,
         progress: {
           create: {},
         },

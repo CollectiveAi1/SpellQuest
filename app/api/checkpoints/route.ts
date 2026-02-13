@@ -1,12 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
+import { checkpointSchema } from "@/lib/validations";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
-    const { userId, phaseNumber, score, totalPoints, passed, answers } = body;
+    const result = checkpointSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json({ error: "Invalid input", details: result.error.format() }, { status: 400 });
+    }
+
+    const { phaseNumber, score, totalPoints, passed, answers } = result.data;
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userId = user.id;
 
     // Get attempt number
     const previousAttempts = await prisma.checkpointResult.count({
@@ -28,26 +52,34 @@ export async function POST(req: NextRequest) {
 
     // If passed, update user progress
     if (passed) {
-      const userProgress = await prisma.userProgress.findUnique({
+      const userProgress = await prisma.userProgress.upsert({
         where: { userId },
+        update: {},
+        create: { userId },
       });
 
       // Mark current phase as completed and advance
-      await prisma.phaseProgress.update({
+      await prisma.phaseProgress.upsert({
         where: {
           userId_phaseNumber: {
             userId,
-            phaseNumber,
+            phaseNumber: phaseNumber,
           },
         },
-        data: {
+        update: {
+          completionPct: 100,
+          completedAt: new Date(),
+        },
+        create: {
+          userId,
+          phaseNumber: phaseNumber,
           completionPct: 100,
           completedAt: new Date(),
         },
       });
 
       // Advance to next phase if not at max
-      if (phaseNumber < 6 && userProgress?.currentPhase === phaseNumber) {
+      if (phaseNumber < 6 && (userProgress.currentPhase === phaseNumber || !userProgress.currentPhase)) {
         const nextPhase = phaseNumber + 1;
 
         await prisma.userProgress.update({

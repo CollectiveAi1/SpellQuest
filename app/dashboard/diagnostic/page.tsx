@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth-options";
 import { prisma } from "@/lib/db";
 import DiagnosticClient from "./_components/diagnostic-client";
+import { User } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function DiagnosticPage() {
     redirect("/login");
   }
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
 
   const userProgress = await prisma.userProgress.findUnique({
     where: { userId },
@@ -29,7 +30,7 @@ export default async function DiagnosticPage() {
     <DiagnosticClient
       userId={userId}
       diagnosticCompleted={userProgress?.diagnosticCompleted ?? false}
-      previousResult={previousResults?.[0] ?? null}
+      previousResult={previousResults?.[0] as any ?? null}
     />
   );
 }

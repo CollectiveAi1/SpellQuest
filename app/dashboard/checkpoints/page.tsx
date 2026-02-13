@@ -13,7 +13,7 @@ export default async function CheckpointsPage() {
     redirect("/login");
   }
 
-  const userId = (session.user as any).id;
+  const userId = session.user.id;
 
   const userProgress = await prisma.userProgress.findUnique({
     where: { userId },
