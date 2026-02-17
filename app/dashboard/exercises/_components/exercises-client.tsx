@@ -17,10 +17,11 @@ import {
   Zap,
   Layers,
   Lightbulb,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
-import { spellingWords } from "@/lib/curriculum-data";
+import { spellingWords, wordDefinitions } from "@/lib/curriculum-data";
 
 interface ExercisesClientProps {
   userId: string;
@@ -153,6 +154,8 @@ export default function ExercisesClient({
   const [hintsUsed, setHintsUsed] = useState(0);
   // Pattern Sorter category assignments
   const [patternCategories, setPatternCategories] = useState<{ categories: string[]; wordCategories: Record<string, string> }>({ categories: [], wordCategories: {} });
+  // Definition visibility for spelling bee
+  const [showDefinition, setShowDefinition] = useState(false);
 
   const phaseKey = `phase${currentPhase}` as keyof typeof spellingWords;
   const availableWords = spellingWords?.[phaseKey] ?? spellingWords?.phase1 ?? [];
@@ -241,6 +244,7 @@ export default function ExercisesClient({
     setUserAnswer("");
     setRevealedHints([]);
     setHintsUsed(0);
+    setShowDefinition(false);
 
     // Pre-generate fill-in-blank data for consistent display
     if (gameType === "fill_blank") {
@@ -348,6 +352,7 @@ export default function ExercisesClient({
       setCurrentWordIndex((prev) => prev + 1);
       setUserAnswer("");
       setRevealedHints([]); // Reset hints for next word
+      setShowDefinition(false); // Reset definition for next word
     } else {
       // Game finished
       const finalScore = isCorrect ? score + 1 : score;
@@ -599,6 +604,7 @@ export default function ExercisesClient({
   // Playing - Spelling Bee
   if (selectedGame === "spelling_bee") {
     const currentWord = gameWords?.[currentWordIndex] ?? "";
+    const definition = wordDefinitions[currentWord.toLowerCase()] || "Definition not available";
 
     return (
       <div className="max-w-2xl mx-auto">
@@ -630,14 +636,44 @@ export default function ExercisesClient({
             Listen to the word and spell it!
           </h2>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => speakWord(currentWord)}
-            className="w-24 h-24 mx-auto gradient-bg rounded-full flex items-center justify-center mb-8 shadow-lg"
-          >
-            <Volume2 className="w-12 h-12 text-white" />
-          </motion.button>
+          <div className="flex justify-center items-center gap-4 mb-8">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => speakWord(currentWord)}
+              className="w-24 h-24 gradient-bg rounded-full flex items-center justify-center shadow-lg"
+            >
+              <Volume2 className="w-12 h-12 text-white" />
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowDefinition(!showDefinition)}
+              className={`w-16 h-16 rounded-full flex items-center justify-center shadow-md transition-colors ${
+                showDefinition 
+                  ? "bg-blue-500 text-white" 
+                  : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50"
+              }`}
+              title="Show Definition"
+            >
+              <BookOpen className="w-7 h-7" />
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+            {showDefinition && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800"
+              >
+                <p className="text-sm text-blue-600 dark:text-blue-300 font-medium mb-1">Definition:</p>
+                <p className="text-blue-800 dark:text-blue-200 italic">{definition}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <input
             type="text"
@@ -669,6 +705,7 @@ export default function ExercisesClient({
     const currentWord = currentData?.word ?? "";
     const missingIndices = currentData?.indices ?? [];
     const unrevealedCount = missingIndices.filter(idx => !revealedHints.includes(idx)).length;
+    const definition = wordDefinitions[currentWord.toLowerCase()] || "Definition not available";
 
     // Create a stable display with fixed letter positions (shows revealed hints)
     const renderWordDisplay = () => {
@@ -722,8 +759,17 @@ export default function ExercisesClient({
             Complete the word!
           </h2>
 
-          <div className="flex justify-center items-center flex-wrap mb-8">
+          <div className="flex justify-center items-center flex-wrap mb-4">
             {renderWordDisplay()}
+          </div>
+
+          {/* Definition displayed below the word */}
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+              <p className="text-sm text-blue-600 dark:text-blue-300 font-medium">Definition:</p>
+            </div>
+            <p className="text-blue-800 dark:text-blue-200 italic">{definition}</p>
           </div>
 
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
