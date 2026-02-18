@@ -32,6 +32,7 @@ model User {
   bookmarks         ResourceBookmark[]
   checkpointResults CheckpointResult[]
   studySessions     StudySession[]
+  writingChallenges WritingChallenge[]
 }
 
 enum UserRole {
@@ -252,4 +253,35 @@ model Project {
   time            String
   phase           String
   level           String
+}
+
+model WritingChallenge {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeType   ChallengeType
+  title           String
+  prompt          String
+  guidelines      Json
+  examples        Json
+  spellingFocus   String
+  wordGoal        Int      @default(100)
+  level           String
+  theme           String
+  content         String   @default("")
+  wordCount       Int      @default(0)
+  status          ProjectStatus @default(DRAFT)
+  unlockedAt      DateTime @default(now())
+  completedAt     DateTime?
+  sourceProjectId Int?
+  
+  @@index([userId])
+  @@index([userId, status])
+}
+
+enum ChallengeType {
+  BONUS_CHALLENGE
+  CREATIVE_EXTENSION
+  THEMED_CHALLENGE
+  SKILL_BUILDER
 }

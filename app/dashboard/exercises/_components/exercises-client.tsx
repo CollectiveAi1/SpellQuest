@@ -158,7 +158,44 @@ export default function ExercisesClient({
   const [showDefinition, setShowDefinition] = useState(false);
 
   const phaseKey = `phase${currentPhase}` as keyof typeof spellingWords;
-  const availableWords = spellingWords?.[phaseKey] ?? spellingWords?.phase1 ?? [];
+  const currentPhaseWords = spellingWords?.[phaseKey] ?? spellingWords?.phase1 ?? [];
+  
+  // Include words from adjacent phases for variety (20% from previous/next phases)
+  const getExpandedWordList = () => {
+    const words = [...currentPhaseWords];
+    
+    // Add some words from previous phase (if exists)
+    if (currentPhase > 1) {
+      const prevPhaseKey = `phase${currentPhase - 1}` as keyof typeof spellingWords;
+      const prevWords = spellingWords?.[prevPhaseKey] ?? [];
+      const numPrevWords = Math.floor(prevWords.length * 0.15);
+      const shuffledPrev = fisherYatesShuffle([...prevWords]).slice(0, numPrevWords);
+      words.push(...shuffledPrev);
+    }
+    
+    // Add some words from next phase for challenge (if exists)
+    if (currentPhase < 6) {
+      const nextPhaseKey = `phase${currentPhase + 1}` as keyof typeof spellingWords;
+      const nextWords = spellingWords?.[nextPhaseKey] ?? [];
+      const numNextWords = Math.floor(nextWords.length * 0.1);
+      const shuffledNext = fisherYatesShuffle([...nextWords]).slice(0, numNextWords);
+      words.push(...shuffledNext);
+    }
+    
+    return words;
+  };
+  
+  // Fisher-Yates shuffle for truly random mixing
+  const fisherYatesShuffle = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+  
+  const availableWords = currentPhaseWords;
 
   const games = [
     {
@@ -232,10 +269,17 @@ export default function ExercisesClient({
   };
 
   const startGame = (gameType: GameType) => {
-    // Create unique word list (no duplicates)
-    const uniqueWords = [...new Set(availableWords)];
-    const shuffled = [...uniqueWords].sort(() => Math.random() - 0.5).slice(0, 10);
-    setGameWords(shuffled);
+    // Get expanded word list with adjacent phases for variety
+    const expandedWords = getExpandedWordList();
+    
+    // Create unique word list (no duplicates) and use Fisher-Yates for true randomness
+    const uniqueWords = [...new Set(expandedWords)];
+    const shuffled = fisherYatesShuffle(uniqueWords).slice(0, 10);
+    
+    // Additional shuffle pass to ensure no patterns from original order
+    const doubleShuffled = fisherYatesShuffle(shuffled);
+    
+    setGameWords(doubleShuffled);
     setSelectedGame(gameType);
     setGameState("playing");
     setCurrentWordIndex(0);
@@ -248,7 +292,7 @@ export default function ExercisesClient({
 
     // Pre-generate fill-in-blank data for consistent display
     if (gameType === "fill_blank") {
-      const blankData = shuffled.map(word => {
+      const blankData = doubleShuffled.map(word => {
         const indices: number[] = [];
         const numMissing = Math.max(1, Math.floor(word.length / 3));
         while (indices.length < numMissing) {
@@ -264,9 +308,10 @@ export default function ExercisesClient({
 
     // Pre-generate word match options (stable across renders - fixes hooks error)
     if (gameType === "word_match") {
-      const matchOptions = shuffled.map(word => {
+      const matchOptions = doubleShuffled.map(word => {
         const wrong = generateWrongSpelling(word);
-        const options = [word, wrong].sort(() => Math.random() - 0.5);
+        // Shuffle options using Fisher-Yates for true randomness
+        const options = fisherYatesShuffle([word, wrong]);
         return { word, wrong, options };
       });
       setWordMatchOptions(matchOptions);
@@ -278,7 +323,7 @@ export default function ExercisesClient({
       const wordPatternMap: Record<string, string[]> = {};
       const patternCounts: Record<string, number> = {};
       
-      shuffled.forEach(word => {
+      doubleShuffled.forEach(word => {
         const patterns = detectPatterns(word);
         wordPatternMap[word] = patterns.length > 0 ? patterns : ["Regular Words"];
         patterns.forEach(p => {
@@ -308,7 +353,7 @@ export default function ExercisesClient({
       
       // Assign each word to exactly one category (primary pattern)
       const wordCategories: Record<string, string> = {};
-      shuffled.forEach(word => {
+      doubleShuffled.forEach(word => {
         const patterns = wordPatternMap[word];
         // Find the best matching category from selected categories
         const matchingCategory = sortedCategories.find(cat => patterns.includes(cat)) || "Regular Words";
@@ -317,7 +362,7 @@ export default function ExercisesClient({
       
       // Make sure Regular Words is always available if needed
       if (!sortedCategories.includes("Regular Words")) {
-        const hasUnassigned = shuffled.some(w => !sortedCategories.includes(wordCategories[w]));
+        const hasUnassigned = doubleShuffled.some(w => !sortedCategories.includes(wordCategories[w]));
         if (hasUnassigned) sortedCategories.push("Regular Words");
       }
       

@@ -24,11 +24,18 @@ export default async function WritingPage() {
     orderBy: { updatedAt: "desc" },
   });
 
+  // Fetch user's writing challenges
+  const userChallenges = await prisma.writingChallenge.findMany({
+    where: { userId },
+    orderBy: { unlockedAt: "desc" },
+  });
+
   return (
     <WritingClient
       userId={userId}
       currentPhase={userProgress?.currentPhase ?? 1}
       userProjects={userProjects}
+      userChallenges={userChallenges}
     />
   );
 }
